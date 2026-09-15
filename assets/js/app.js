@@ -12,7 +12,7 @@
   'use strict';
 
   var TIMEOUT_MS = 25000; // generous for Vercel cold starts
-  var state = { role: 'user', credits: 0, email: '' };
+  var state = { role: 'user', credits: 0, email: '', owner: false };
   var sentTo = '';
 
   function $(id) { return document.getElementById(id); }
@@ -36,10 +36,10 @@
     // hub: list
     hubListTitle: $('hubListTitle'), myList: $('myList'), myEmpty: $('myEmpty'),
 
-    // admin: manage resellers/roles
-    admUsersPanel: $('admUsersPanel'), admUserForm: $('admUserForm'),
-    admUserEmail: $('admUserEmail'), admUserRole: $('admUserRole'),
-    admUserCredits: $('admUserCredits'), admUserMsg: $('admUserMsg'),
+    // owner: credit management
+    ownerPanel: $('ownerPanel'), ownerForm: $('ownerForm'),
+    ownerEmail: $('ownerEmail'), ownerRole: $('ownerRole'),
+    ownerCredits: $('ownerCredits'), ownerMsg: $('ownerMsg'),
 
     allowPanel: $('allowPanel'), allowForm: $('allowForm'), allowInput: $('allowInput'),
     allowMsg: $('allowMsg'), allowList: $('allowList'), allowEmpty: $('allowEmpty')
@@ -127,7 +127,7 @@
   function loadMe() {
     show('loading');
     return api('/api/me', { method: 'GET' }).then(function (me) {
-      state.role = me.role; state.credits = me.credits; state.email = me.email;
+      state.role = me.role; state.credits = me.credits; state.email = me.email; state.owner = !!me.owner;
       els.who.textContent = me.email + ' · ' + me.role;
       els.who.hidden = false; els.signOut.hidden = false;
       showPanels();
@@ -151,7 +151,7 @@
     // admin-only fields
     els.hubTesterBtn.hidden = !admin;
     // admin management
-    els.admUsersPanel.hidden = !admin;
+    els.ownerPanel.hidden = !state.owner;   // credit management: owner only
     els.allowPanel.hidden = !admin;
 
     els.hubListTitle.textContent = admin ? 'All tokens' : 'Your tokens';
@@ -364,19 +364,19 @@
       }).catch(function (err) { say(els.claimMsg, err.message, 'err'); });
     });
 
-    // admin: manage resellers / roles
-    els.admUserForm.addEventListener('submit', function (e) {
+    // owner: credit management (roles + credits)
+    els.ownerForm.addEventListener('submit', function (e) {
       e.preventDefault();
-      var body = { email: els.admUserEmail.value.trim() };
-      if (els.admUserRole.value) body.role = els.admUserRole.value;
-      var add = parseInt(els.admUserCredits.value, 10) || 0;
+      var body = { email: els.ownerEmail.value.trim() };
+      if (els.ownerRole.value) body.role = els.ownerRole.value;
+      var add = parseInt(els.ownerCredits.value, 10) || 0;
       if (add !== 0) body.addCredits = add;
-      say(els.admUserMsg, 'Applying…', '');
+      say(els.ownerMsg, 'Applying…', '');
       jpost('/api/admin-user', body).then(function (data) {
         var u = data.user;
-        say(els.admUserMsg, u.email + ' → role ' + u.role + ', ' + u.credits + ' credits', 'ok');
-        els.admUserCredits.value = '0';
-      }).catch(function (err) { say(els.admUserMsg, err.message, 'err'); });
+        say(els.ownerMsg, u.email + ' → role ' + u.role + ', ' + u.credits + ' credits', 'ok');
+        els.ownerCredits.value = '0';
+      }).catch(function (err) { say(els.ownerMsg, err.message, 'err'); });
     });
 
     // admin: approved sign-in emails (panel)

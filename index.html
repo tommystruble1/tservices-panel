@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex, nofollow" />
   <title>Yaoki Panel</title>
-  <link rel="stylesheet" href="assets/css/panel.css?v=6" />
+  <link rel="stylesheet" href="assets/css/panel.css?v=7" />
 </head>
 <body>
   <header class="top">
@@ -102,23 +102,24 @@
         <p class="muted" id="myEmpty" hidden>No tokens yet.</p>
       </section>
 
-      <!-- ADMIN: manage resellers -->
-      <section class="card" id="admUsersPanel" hidden>
-        <h2>Admin — resellers &amp; roles</h2>
-        <form class="grid" id="admUserForm" novalidate>
-          <label>Account email<input type="email" id="admUserEmail" placeholder="person@example.com" /></label>
-          <label>Set role (panel access)
-            <select id="admUserRole">
+      <!-- OWNER: credit management -->
+      <section class="card" id="ownerPanel" hidden>
+        <h2>Credit Management <span class="muted" style="font-weight:400;font-size:13px">(Admin)</span></h2>
+        <p class="muted">Owner only. Set a reseller's role and top up their credits.</p>
+        <form class="grid" id="ownerForm" novalidate>
+          <label>Account email<input type="email" id="ownerEmail" placeholder="person@example.com" /></label>
+          <label>Set role
+            <select id="ownerRole">
               <option value="">— leave unchanged —</option>
               <option value="reseller">Reseller (credit-based access)</option>
               <option value="admin">Dev (full access)</option>
               <option value="user">Remove panel access</option>
             </select>
           </label>
-          <label>Add credits (+/-)<input type="number" id="admUserCredits" value="0" /></label>
+          <label>Add credits (+/-)<input type="number" id="ownerCredits" value="0" /></label>
           <button class="btn btn--primary btn--sm" type="submit">Apply</button>
         </form>
-        <p class="msg" id="admUserMsg" role="status" aria-live="polite"></p>
+        <p class="msg" id="ownerMsg" role="status" aria-live="polite"></p>
       </section>
 
       <!-- ADMIN: approved sign-in emails (panel) -->
@@ -137,7 +138,7 @@
     </div>
   </main>
 
-  <script src="assets/js/backend.js?v=6"></script>
-  <script src="assets/js/app.js?v=6"></script>
+  <script src="assets/js/backend.js?v=7"></script>
+  <script src="assets/js/app.js?v=7"></script>
 </body>
 </html>
