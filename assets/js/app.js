@@ -38,7 +38,7 @@
 
     // owner: credit management
     ownerPanel: $('ownerPanel'), ownerForm: $('ownerForm'),
-    ownerEmail: $('ownerEmail'), ownerRole: $('ownerRole'),
+    ownerEmail: $('ownerEmail'),
     ownerCredits: $('ownerCredits'), ownerMsg: $('ownerMsg'),
 
     allowPanel: $('allowPanel'), allowForm: $('allowForm'), allowInput: $('allowInput'),
@@ -368,7 +368,6 @@
     els.ownerForm.addEventListener('submit', function (e) {
       e.preventDefault();
       var body = { email: els.ownerEmail.value.trim() };
-      if (els.ownerRole.value) body.role = els.ownerRole.value;
       var add = parseInt(els.ownerCredits.value, 10) || 0;
       if (add !== 0) body.addCredits = add;
       say(els.ownerMsg, 'Applying…', '');
