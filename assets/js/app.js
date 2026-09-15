@@ -28,9 +28,7 @@
     // hub: mint (staff)
     hubCredits: $('hubCredits'), hubMint: $('hubMint'),
     hubDur: $('hubDur'), hubType: $('hubType'), hubTesterBtn: $('hubTesterBtn'), hubGenList: $('hubGenList'),
-    hubMintForm: $('hubMintForm'), hubTier: $('hubTier'), hubDays: $('hubDays'),
-    hubNote: $('hubNote'), hubTester: $('hubTester'), hubTesterWrap: $('hubTesterWrap'),
-    hubAssign: $('hubAssign'), hubAssignWrap: $('hubAssignWrap'), hubMintMsg: $('hubMintMsg'),
+    hubMintBtn: $('hubMintBtn'), hubMintMsg: $('hubMintMsg'),
 
     // hub: claim (everyone)
     claimForm: $('claimForm'), claimInput: $('claimInput'), claimMsg: $('claimMsg'),
@@ -149,8 +147,6 @@
     else els.hubCredits.hidden = true;
     // admin-only fields
     els.hubTesterBtn.hidden = !admin;
-    els.hubTesterWrap.hidden = !admin;
-    els.hubAssignWrap.hidden = !admin;
     // admin management
     els.admUsersPanel.hidden = !admin;
 
@@ -255,34 +251,39 @@
     });
   }
 
-  var quickDays = 30; // selected duration for quick-generate
+  var quickDays = 30, quickTier = 'standard', quickTester = false;
+  function selectIn(container, btn) {
+    Array.prototype.forEach.call(container.querySelectorAll('button'), function (x) { x.classList.remove('is-active'); });
+    btn.classList.add('is-active');
+  }
   function wireQuick() {
-    // duration picker: click selects the active duration
+    // duration picker
     if (els.hubDur) {
-      var durBtns = els.hubDur.querySelectorAll('button[data-days]');
-      Array.prototype.forEach.call(durBtns, function (b) {
+      Array.prototype.forEach.call(els.hubDur.querySelectorAll('button[data-days]'), function (b) {
         b.addEventListener('click', function () {
           quickDays = parseInt(b.getAttribute('data-days'), 10) || 0;
-          Array.prototype.forEach.call(durBtns, function (x) { x.classList.remove('is-active'); });
-          b.classList.add('is-active');
+          selectIn(els.hubDur, b);
         });
       });
     }
-    // type buttons: click mints a token of that tier for the selected duration
+    // type picker
     if (els.hubType) {
-      var typeBtns = els.hubType.querySelectorAll('button[data-tier]');
-      Array.prototype.forEach.call(typeBtns, function (b) {
+      Array.prototype.forEach.call(els.hubType.querySelectorAll('button[data-tier]'), function (b) {
         b.addEventListener('click', function () {
-          b.disabled = true;
-          mint({
-            tier: b.getAttribute('data-tier') || 'standard',
-            days: quickDays,
-            tester: b.getAttribute('data-tester') === '1'
-          }).then(function (tok) {
-            b.disabled = false;
-            say(els.hubMintMsg, 'Created ' + tok.token_key + ' — click it above to copy.', 'ok');
-          }).catch(function (err) { b.disabled = false; say(els.hubMintMsg, err.message, 'err'); });
+          quickTier = b.getAttribute('data-tier') || 'standard';
+          quickTester = b.getAttribute('data-tester') === '1';
+          selectIn(els.hubType, b);
         });
+      });
+    }
+    // mint button
+    if (els.hubMintBtn) {
+      els.hubMintBtn.addEventListener('click', function () {
+        els.hubMintBtn.disabled = true;
+        say(els.hubMintMsg, 'Minting…', '');
+        mint({ tier: quickTier, days: quickDays, tester: quickTester })
+          .then(function (tok) { els.hubMintBtn.disabled = false; say(els.hubMintMsg, 'Created ' + tok.token_key + ' — click it above to copy.', 'ok'); })
+          .catch(function (err) { els.hubMintBtn.disabled = false; say(els.hubMintMsg, err.message, 'err'); });
       });
     }
   }
@@ -320,26 +321,6 @@
       jpost('/api/my-tokens', { token: key }).then(function () {
         els.claimInput.value = ''; say(els.claimMsg, 'Token added to your account.', 'ok'); loadHubList();
       }).catch(function (err) { say(els.claimMsg, err.message, 'err'); });
-    });
-
-    // mint form (staff)
-    els.hubMintForm.addEventListener('submit', function (e) {
-      e.preventDefault();
-      say(els.hubMintMsg, 'Minting…', '');
-      var body = {
-        tier: els.hubTier.value,
-        days: parseInt(els.hubDays.value, 10) || 0,
-        note: els.hubNote.value
-      };
-      if (state.role === 'admin') {
-        body.tester = els.hubTester.checked;
-        body.assignEmail = els.hubAssign.value.trim();
-      }
-      mint(body).then(function (tok) {
-        say(els.hubMintMsg, 'Created ' + tok.token_key + ' — click it above to copy.', 'ok');
-        els.hubNote.value = '';
-        if (state.role === 'admin') { els.hubTester.checked = false; els.hubAssign.value = ''; }
-      }).catch(function (err) { say(els.hubMintMsg, err.message, 'err'); });
     });
 
     // admin: manage resellers / roles

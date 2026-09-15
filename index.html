@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex, nofollow" />
   <title>Yaoki Panel</title>
-  <link rel="stylesheet" href="assets/css/panel.css?v=3" />
+  <link rel="stylesheet" href="assets/css/panel.css?v=4" />
 </head>
 <body>
   <header class="top">
@@ -64,7 +64,7 @@
         <!-- staff mint hub (reseller/admin only) -->
         <div id="hubMint" hidden>
           <div class="quickgen">
-            <span class="quickgen__label">Quick generate — pick a duration, then a type:</span>
+            <span class="quickgen__label">Generate a token — pick a duration and type, then Mint:</span>
             <div class="quickgen__row">
               <span class="quickgen__sub">Duration</span>
               <div class="quickgen__btns" id="hubDur">
@@ -75,30 +75,16 @@
             <div class="quickgen__row">
               <span class="quickgen__sub">Type</span>
               <div class="quickgen__btns" id="hubType">
-                <button class="btn btn--sm" type="button" data-tier="standard">Standard</button>
-                <button class="btn btn--sm" type="button" data-tier="plus">Plus</button>
-                <button class="btn btn--sm" type="button" data-tier="dev">Dev</button>
-                <button class="btn btn--sm btn--tester" type="button" data-tier="dev" data-tester="1" id="hubTesterBtn" hidden>Tester</button>
+                <button class="btn btn--sm typ is-active" type="button" data-tier="standard">Standard</button>
+                <button class="btn btn--sm typ" type="button" data-tier="plus">Plus</button>
+                <button class="btn btn--sm typ" type="button" data-tier="dev">Dev</button>
+                <button class="btn btn--sm typ btn--tester" type="button" data-tier="dev" data-tester="1" id="hubTesterBtn" hidden>Tester</button>
               </div>
+              <button class="btn btn--primary btn--sm" type="button" id="hubMintBtn">Mint token</button>
             </div>
+            <p class="msg" id="hubMintMsg" role="status" aria-live="polite"></p>
             <ul class="toklist genlist" id="hubGenList"></ul>
           </div>
-
-          <form class="grid" id="hubMintForm" novalidate>
-            <label>Tier
-              <select id="hubTier">
-                <option value="standard">Standard</option>
-                <option value="plus">Plus</option>
-                <option value="dev">Dev</option>
-              </select>
-            </label>
-            <label>Days (0 = never)<input type="number" id="hubDays" min="0" value="30" /></label>
-            <label>Note<input type="text" id="hubNote" placeholder="buyer name" /></label>
-            <label class="check" id="hubTesterWrap" hidden><input type="checkbox" id="hubTester" /> Tester token</label>
-            <label id="hubAssignWrap" hidden>Assign to email<input type="email" id="hubAssign" placeholder="buyer@example.com" /></label>
-            <button class="btn btn--primary btn--sm" type="submit">Mint token</button>
-          </form>
-          <p class="msg" id="hubMintMsg" role="status" aria-live="polite"></p>
           <hr class="hubsep" />
         </div>
 
@@ -139,7 +125,7 @@
     </div>
   </main>
 
-  <script src="assets/js/backend.js?v=3"></script>
-  <script src="assets/js/app.js?v=3"></script>
+  <script src="assets/js/backend.js?v=4"></script>
+  <script src="assets/js/app.js?v=4"></script>
 </body>
 </html>
