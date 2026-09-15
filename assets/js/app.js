@@ -334,6 +334,22 @@
     wireResMint(); wireAdmMint(); wireAdmUsers();
   }
 
+  /* Cross-tab sign-in: when the magic link is opened in another tab of the
+     same browser, it stores the session token in localStorage — which fires a
+     `storage` event in every OTHER tab. A tab still sitting on the sign-in
+     screen picks that up here and signs itself in, so you don't have to come
+     back and refresh it. (Different physical devices have separate storage, so
+     this covers same-browser only.) */
+  window.addEventListener('storage', function (e) {
+    if (e.key !== 'ts_auth_token') return;
+    if (e.newValue) {
+      loadMe();
+    } else {
+      els.who.hidden = true; els.signOut.hidden = true;
+      toEmailForm(); show('signedOut');
+    }
+  });
+
   /* ---------- boot ---------- */
   wire();
   toEmailForm();
