@@ -102,6 +102,9 @@ form { margin: 10px 0 0; }
 .quickgen { margin: 4px 0 16px; padding: 12px; border: 1px dashed var(--border); border-radius: 10px; background: #0f131c; }
 .quickgen__label { display: block; font-size: 12px; color: var(--dim); margin-bottom: 8px; }
 .quickgen__btns { display: flex; flex-wrap: wrap; gap: 8px; }
+.quickgen__row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+.quickgen__sub { font-size: 12px; color: var(--dim); min-width: 64px; }
+.dur.is-active { background: linear-gradient(180deg, var(--acc), #6a49f0); border-color: #6a49f0; color: #fff; }
 .btn--tester { border-color: var(--warn); color: var(--warn); }
 .btn--tester:hover { background: rgba(250, 204, 21, .1); }
 .genlist { margin-top: 12px; }

@@ -27,7 +27,7 @@
 
     // hub: mint (staff)
     hubCredits: $('hubCredits'), hubMint: $('hubMint'),
-    hubQuick: $('hubQuick'), hubTesterBtn: $('hubTesterBtn'), hubGenList: $('hubGenList'),
+    hubDur: $('hubDur'), hubType: $('hubType'), hubTesterBtn: $('hubTesterBtn'), hubGenList: $('hubGenList'),
     hubMintForm: $('hubMintForm'), hubTier: $('hubTier'), hubDays: $('hubDays'),
     hubNote: $('hubNote'), hubTester: $('hubTester'), hubTesterWrap: $('hubTesterWrap'),
     hubAssign: $('hubAssign'), hubAssignWrap: $('hubAssignWrap'), hubMintMsg: $('hubMintMsg'),
@@ -255,22 +255,36 @@
     });
   }
 
+  var quickDays = 30; // selected duration for quick-generate
   function wireQuick() {
-    if (!els.hubQuick) return;
-    var btns = els.hubQuick.querySelectorAll('button[data-days]');
-    Array.prototype.forEach.call(btns, function (btn) {
-      btn.addEventListener('click', function () {
-        btn.disabled = true;
-        mint({
-          tier: els.hubTier.value,
-          days: parseInt(btn.getAttribute('data-days'), 10) || 0,
-          tester: btn.getAttribute('data-tester') === '1'
-        }).then(function (tok) {
-          btn.disabled = false;
-          say(els.hubMintMsg, 'Created ' + tok.token_key + ' — click it above to copy.', 'ok');
-        }).catch(function (err) { btn.disabled = false; say(els.hubMintMsg, err.message, 'err'); });
+    // duration picker: click selects the active duration
+    if (els.hubDur) {
+      var durBtns = els.hubDur.querySelectorAll('button[data-days]');
+      Array.prototype.forEach.call(durBtns, function (b) {
+        b.addEventListener('click', function () {
+          quickDays = parseInt(b.getAttribute('data-days'), 10) || 0;
+          Array.prototype.forEach.call(durBtns, function (x) { x.classList.remove('is-active'); });
+          b.classList.add('is-active');
+        });
       });
-    });
+    }
+    // type buttons: click mints a token of that tier for the selected duration
+    if (els.hubType) {
+      var typeBtns = els.hubType.querySelectorAll('button[data-tier]');
+      Array.prototype.forEach.call(typeBtns, function (b) {
+        b.addEventListener('click', function () {
+          b.disabled = true;
+          mint({
+            tier: b.getAttribute('data-tier') || 'standard',
+            days: quickDays,
+            tester: b.getAttribute('data-tester') === '1'
+          }).then(function (tok) {
+            b.disabled = false;
+            say(els.hubMintMsg, 'Created ' + tok.token_key + ' — click it above to copy.', 'ok');
+          }).catch(function (err) { b.disabled = false; say(els.hubMintMsg, err.message, 'err'); });
+        });
+      });
+    }
   }
 
   /* ---------- static events ---------- */
