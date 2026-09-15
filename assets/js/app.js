@@ -11,7 +11,7 @@
 (function () {
   'use strict';
 
-  var TIMEOUT_MS = 12000;
+  var TIMEOUT_MS = 25000; // generous for Vercel cold starts
   var state = { role: 'user', credits: 0, email: '' };
   var sentTo = '';
 
@@ -27,7 +27,7 @@
 
     // hub: mint (staff)
     hubCredits: $('hubCredits'), hubMint: $('hubMint'),
-    hubDur: $('hubDur'), hubType: $('hubType'), hubTesterBtn: $('hubTesterBtn'), hubGenList: $('hubGenList'),
+    hubDur: $('hubDur'), hubType: $('hubType'), hubTesterBtn: $('hubTesterBtn'),
     hubMintBtn: $('hubMintBtn'), hubMintMsg: $('hubMintMsg'),
 
     // hub: claim (everyone)
@@ -151,6 +151,7 @@
     els.admUsersPanel.hidden = !admin;
 
     els.hubListTitle.textContent = admin ? 'All tokens' : 'Your tokens';
+    updateCost();
     loadHubList();
   }
 
@@ -234,24 +235,37 @@
       els.hubCredits.textContent = me.credits + ' credits';
     }).catch(function () {});
   }
-  function genRow(tok) {
-    var li = document.createElement('li'); li.className = 'tok';
-    li.appendChild(keyCode(tok.token_key));
-    var meta = metaFor(tok);
-    meta.appendChild(badge('click key to copy', 'muted'));
-    li.appendChild(meta);
-    els.hubGenList.insertBefore(li, els.hubGenList.firstChild);
-  }
   function mint(body) {
     return jpost('/api/tokens', body).then(function (data) {
-      genRow(data.token);
-      loadHubList();
+      loadHubList();      // new token shows in the list below (newest first)
       refreshCredits();
       return data.token;
     });
   }
 
   var quickDays = 30, quickTier = 'standard', quickTester = false;
+
+  /* Credit-cost mirror of the server (server/lib/tokens.js is the source of
+     truth; this is only for showing the price on the button). Keep in sync. */
+  var CREDIT_COST = {
+    standard: { month: 1, lifetime: 3 },
+    plus:     { month: 2, lifetime: 5 },
+    dev:      { month: 3, lifetime: 8 }
+  };
+  function costFor(tier, days) {
+    var t = CREDIT_COST[tier] || CREDIT_COST.standard;
+    return (!days || days <= 0) ? t.lifetime : t.month;
+  }
+  function updateCost() {
+    if (!els.hubMintBtn) return;
+    if (state.role === 'reseller') {
+      var c = costFor(quickTier, quickDays);
+      els.hubMintBtn.textContent = 'Mint token (' + c + ' credit' + (c === 1 ? '' : 's') + ')';
+    } else {
+      els.hubMintBtn.textContent = 'Mint token';
+    }
+  }
+
   function selectIn(container, btn) {
     Array.prototype.forEach.call(container.querySelectorAll('button'), function (x) { x.classList.remove('is-active'); });
     btn.classList.add('is-active');
@@ -262,7 +276,7 @@
       Array.prototype.forEach.call(els.hubDur.querySelectorAll('button[data-days]'), function (b) {
         b.addEventListener('click', function () {
           quickDays = parseInt(b.getAttribute('data-days'), 10) || 0;
-          selectIn(els.hubDur, b);
+          selectIn(els.hubDur, b); updateCost();
         });
       });
     }
@@ -272,7 +286,7 @@
         b.addEventListener('click', function () {
           quickTier = b.getAttribute('data-tier') || 'standard';
           quickTester = b.getAttribute('data-tester') === '1';
-          selectIn(els.hubType, b);
+          selectIn(els.hubType, b); updateCost();
         });
       });
     }
@@ -282,7 +296,7 @@
         els.hubMintBtn.disabled = true;
         say(els.hubMintMsg, 'Minting…', '');
         mint({ tier: quickTier, days: quickDays, tester: quickTester })
-          .then(function (tok) { els.hubMintBtn.disabled = false; say(els.hubMintMsg, 'Created ' + tok.token_key + ' — click it above to copy.', 'ok'); })
+          .then(function (tok) { els.hubMintBtn.disabled = false; say(els.hubMintMsg, 'Created ' + tok.token_key + ' — see it in the list below (click the key to copy).', 'ok'); })
           .catch(function (err) { els.hubMintBtn.disabled = false; say(els.hubMintMsg, err.message, 'err'); });
       });
     }

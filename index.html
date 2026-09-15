@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex, nofollow" />
   <title>Yaoki Panel</title>
-  <link rel="stylesheet" href="assets/css/panel.css?v=4" />
+  <link rel="stylesheet" href="assets/css/panel.css?v=5" />
 </head>
 <body>
   <header class="top">
@@ -59,7 +59,7 @@
 
       <!-- MY TOKENS = hub: mint (staff) + claim (everyone) + token list -->
       <section class="card">
-        <h2>My tokens <span class="pill" id="hubCredits" hidden>— credits</span></h2>
+        <h2>Create Token <span class="muted" style="font-weight:400;font-size:13px">(Resellers)</span> <span class="pill" id="hubCredits" hidden>— credits</span></h2>
 
         <!-- staff mint hub (reseller/admin only) -->
         <div id="hubMint" hidden>
@@ -83,7 +83,6 @@
               <button class="btn btn--primary btn--sm" type="button" id="hubMintBtn">Mint token</button>
             </div>
             <p class="msg" id="hubMintMsg" role="status" aria-live="polite"></p>
-            <ul class="toklist genlist" id="hubGenList"></ul>
           </div>
           <hr class="hubsep" />
         </div>
@@ -125,7 +124,7 @@
     </div>
   </main>
 
-  <script src="assets/js/backend.js?v=4"></script>
-  <script src="assets/js/app.js?v=4"></script>
+  <script src="assets/js/backend.js?v=5"></script>
+  <script src="assets/js/app.js?v=5"></script>
 </body>
 </html>
