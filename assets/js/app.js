@@ -39,7 +39,10 @@
     // admin: manage resellers/roles
     admUsersPanel: $('admUsersPanel'), admUserForm: $('admUserForm'),
     admUserEmail: $('admUserEmail'), admUserRole: $('admUserRole'),
-    admUserCredits: $('admUserCredits'), admUserMsg: $('admUserMsg')
+    admUserCredits: $('admUserCredits'), admUserMsg: $('admUserMsg'),
+
+    allowPanel: $('allowPanel'), allowForm: $('allowForm'), allowInput: $('allowInput'),
+    allowMsg: $('allowMsg'), allowList: $('allowList'), allowEmpty: $('allowEmpty')
   };
 
   /* ---------- view switch ---------- */
@@ -149,10 +152,34 @@
     els.hubTesterBtn.hidden = !admin;
     // admin management
     els.admUsersPanel.hidden = !admin;
+    els.allowPanel.hidden = !admin;
 
     els.hubListTitle.textContent = admin ? 'All tokens' : 'Your tokens';
     updateCost();
     loadHubList();
+    if (admin) loadAllowlist();
+  }
+
+  function loadAllowlist() {
+    els.allowList.textContent = ''; els.allowEmpty.hidden = true;
+    api('/api/allowlist', { method: 'GET' }).then(function (data) {
+      var emails = (data && data.emails) || [];
+      if (!emails.length) { els.allowEmpty.hidden = false; return; }
+      emails.forEach(function (row) {
+        var li = document.createElement('li'); li.className = 'tok';
+        var span = document.createElement('span'); span.textContent = row.email;
+        li.appendChild(span);
+        var b = document.createElement('button');
+        b.className = 'btn btn--sm btn--danger'; b.type = 'button'; b.textContent = 'Remove';
+        b.addEventListener('click', function () {
+          b.disabled = true;
+          jpost('/api/allowlist', { email: row.email, action: 'remove' })
+            .then(loadAllowlist).catch(function (err) { b.disabled = false; window.alert(err.message); });
+        });
+        li.appendChild(b);
+        els.allowList.appendChild(li);
+      });
+    }).catch(function () { els.allowEmpty.hidden = false; });
   }
 
   /* ---------- rendering ---------- */
@@ -350,6 +377,17 @@
         say(els.admUserMsg, u.email + ' → role ' + u.role + ', ' + u.credits + ' credits', 'ok');
         els.admUserCredits.value = '0';
       }).catch(function (err) { say(els.admUserMsg, err.message, 'err'); });
+    });
+
+    // admin: approved sign-in emails (panel)
+    els.allowForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var email = els.allowInput.value.trim();
+      if (!email || email.indexOf('@') === -1) { say(els.allowMsg, 'Enter a valid email.', 'err'); return; }
+      say(els.allowMsg, 'Adding…', '');
+      jpost('/api/allowlist', { email: email, action: 'add' }).then(function () {
+        els.allowInput.value = ''; say(els.allowMsg, 'Approved.', 'ok'); loadAllowlist();
+      }).catch(function (err) { say(els.allowMsg, err.message, 'err'); });
     });
 
     wireQuick();
