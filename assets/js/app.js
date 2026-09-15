@@ -27,7 +27,7 @@
 
     // hub: mint (staff)
     hubCredits: $('hubCredits'), hubMint: $('hubMint'),
-    hubDur: $('hubDur'), hubType: $('hubType'), hubTesterBtn: $('hubTesterBtn'),
+    hubDur: $('hubDur'), hubType: $('hubType'), hubDevBtn: $('hubDevBtn'), hubTesterBtn: $('hubTesterBtn'),
     hubMintBtn: $('hubMintBtn'), hubMintMsg: $('hubMintMsg'),
 
     // hub: claim (everyone)
@@ -38,7 +38,7 @@
 
     // owner: credit management
     ownerPanel: $('ownerPanel'), ownerForm: $('ownerForm'),
-    ownerEmail: $('ownerEmail'),
+    ownerEmail: $('ownerEmail'), ownerUnlimited: $('ownerUnlimited'),
     ownerCredits: $('ownerCredits'), ownerMsg: $('ownerMsg'),
 
     allowPanel: $('allowPanel'), allowForm: $('allowForm'), allowInput: $('allowInput'),
@@ -146,9 +146,12 @@
     // mint hub — staff only
     els.hubMint.hidden = !staff;
     // credits pill — resellers (admins are unlimited)
-    if (role === 'reseller') { els.hubCredits.hidden = false; els.hubCredits.textContent = state.credits + ' credits'; }
-    else els.hubCredits.hidden = true;
-    // admin-only fields
+    if (role === 'reseller') {
+      els.hubCredits.hidden = false;
+      els.hubCredits.textContent = state.credits < 0 ? 'Unlimited' : (state.credits + ' credits');
+    } else els.hubCredits.hidden = true;
+    // admin-only types: Dev and Tester (resellers get Standard/Plus only)
+    els.hubDevBtn.hidden = !admin;
     els.hubTesterBtn.hidden = !admin;
     // admin management
     els.ownerPanel.hidden = !state.owner;   // credit management: owner only
@@ -285,7 +288,7 @@
   }
   function updateCost() {
     if (!els.hubMintBtn) return;
-    if (state.role === 'reseller') {
+    if (state.role === 'reseller' && state.credits >= 0) {
       var c = costFor(quickTier, quickDays);
       els.hubMintBtn.textContent = 'Mint token (' + c + ' credit' + (c === 1 ? '' : 's') + ')';
     } else {
@@ -368,13 +371,18 @@
     els.ownerForm.addEventListener('submit', function (e) {
       e.preventDefault();
       var body = { email: els.ownerEmail.value.trim() };
-      var add = parseInt(els.ownerCredits.value, 10) || 0;
-      if (add !== 0) body.addCredits = add;
+      if (els.ownerUnlimited.checked) {
+        body.unlimited = true;
+      } else {
+        var add = parseInt(els.ownerCredits.value, 10) || 0;
+        if (add !== 0) body.addCredits = add;
+      }
       say(els.ownerMsg, 'Applying…', '');
       jpost('/api/admin-user', body).then(function (data) {
         var u = data.user;
-        say(els.ownerMsg, u.email + ' → role ' + u.role + ', ' + u.credits + ' credits', 'ok');
-        els.ownerCredits.value = '0';
+        var creditsText = (u.credits < 0) ? 'Unlimited' : (u.credits + ' credits');
+        say(els.ownerMsg, u.email + ' → role ' + u.role + ', ' + creditsText, 'ok');
+        els.ownerCredits.value = '0'; els.ownerUnlimited.checked = false;
       }).catch(function (err) { say(els.ownerMsg, err.message, 'err'); });
     });
 

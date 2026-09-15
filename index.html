@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex, nofollow" />
   <title>Yaoki Panel</title>
-  <link rel="stylesheet" href="assets/css/panel.css?v=8" />
+  <link rel="stylesheet" href="assets/css/panel.css?v=9" />
 </head>
 <body>
   <header class="top">
@@ -77,7 +77,7 @@
               <div class="quickgen__btns" id="hubType">
                 <button class="btn btn--sm typ is-active" type="button" data-tier="standard">Standard</button>
                 <button class="btn btn--sm typ" type="button" data-tier="plus">Plus</button>
-                <button class="btn btn--sm typ" type="button" data-tier="dev">Dev</button>
+                <button class="btn btn--sm typ" type="button" data-tier="dev" id="hubDevBtn" hidden>Dev</button>
                 <button class="btn btn--sm typ btn--tester" type="button" data-tier="dev" data-tester="1" id="hubTesterBtn" hidden>Tester</button>
               </div>
               <button class="btn btn--primary btn--sm" type="button" id="hubMintBtn">Mint token</button>
@@ -109,6 +109,7 @@
         <form class="grid" id="ownerForm" novalidate>
           <label>Account email<input type="email" id="ownerEmail" placeholder="person@example.com" /></label>
           <label>Add credits (+/-)<input type="number" id="ownerCredits" value="0" /></label>
+          <label class="check"><input type="checkbox" id="ownerUnlimited" /> Unlimited minting (no credit limit)</label>
           <button class="btn btn--primary btn--sm" type="submit">Apply</button>
         </form>
         <p class="msg" id="ownerMsg" role="status" aria-live="polite"></p>
@@ -130,7 +131,7 @@
     </div>
   </main>
 
-  <script src="assets/js/backend.js?v=8"></script>
-  <script src="assets/js/app.js?v=8"></script>
+  <script src="assets/js/backend.js?v=9"></script>
+  <script src="assets/js/app.js?v=9"></script>
 </body>
 </html>
