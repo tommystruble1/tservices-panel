@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex, nofollow" />
   <title>Yaoki Panel</title>
-  <link rel="stylesheet" href="assets/css/panel.css" />
+  <link rel="stylesheet" href="assets/css/panel.css?v=2" />
 </head>
 <body>
   <header class="top">
@@ -57,59 +57,55 @@
     <!-- signed in with access -->
     <div id="stPanels" hidden>
 
-      <!-- MY TOKENS (everyone with access) -->
+      <!-- MY TOKENS = hub: mint (staff) + claim (everyone) + token list -->
       <section class="card">
-        <h2>My tokens</h2>
-        <p class="muted">Attach a token you were given, then paste it into <code>yaoki/token.txt</code> in-game.</p>
+        <h2>My tokens <span class="pill" id="hubCredits" hidden>— credits</span></h2>
+
+        <!-- staff mint hub (reseller/admin only) -->
+        <div id="hubMint" hidden>
+          <div class="quickgen">
+            <span class="quickgen__label">Quick generate — one click (uses the tier below):</span>
+            <div class="quickgen__btns" id="hubQuick">
+              <button class="btn btn--sm" type="button" data-days="7">1 Week</button>
+              <button class="btn btn--sm" type="button" data-days="30">1 Month</button>
+              <button class="btn btn--sm" type="button" data-days="90">3 Months</button>
+              <button class="btn btn--sm" type="button" data-days="0">Lifetime</button>
+              <button class="btn btn--sm btn--tester" type="button" data-days="0" data-tester="1" id="hubTesterBtn" hidden>Tester</button>
+            </div>
+            <ul class="toklist genlist" id="hubGenList"></ul>
+          </div>
+
+          <form class="grid" id="hubMintForm" novalidate>
+            <label>Tier
+              <select id="hubTier">
+                <option value="standard">Standard</option>
+                <option value="plus">Plus</option>
+                <option value="dev">Dev</option>
+              </select>
+            </label>
+            <label>Days (0 = never)<input type="number" id="hubDays" min="0" value="30" /></label>
+            <label>Note<input type="text" id="hubNote" placeholder="buyer name" /></label>
+            <label class="check" id="hubTesterWrap" hidden><input type="checkbox" id="hubTester" /> Tester token</label>
+            <label id="hubAssignWrap" hidden>Assign to email<input type="email" id="hubAssign" placeholder="buyer@example.com" /></label>
+            <button class="btn btn--primary btn--sm" type="submit">Mint token</button>
+          </form>
+          <p class="msg" id="hubMintMsg" role="status" aria-live="polite"></p>
+          <hr class="hubsep" />
+        </div>
+
+        <!-- claim (everyone) -->
+        <p class="muted">Have a token? Attach it to your account, then paste it into <code>yaoki/token.txt</code> in-game.</p>
         <form class="inline" id="claimForm" novalidate>
           <input class="input" type="text" id="claimInput" placeholder="YAOKI-XXXXX-XXXXX-XXXXX"
                  autocomplete="off" spellcheck="false" />
           <button class="btn btn--primary btn--sm" type="submit">Add</button>
         </form>
         <p class="msg" id="claimMsg" role="status" aria-live="polite"></p>
-        <ul class="toklist" id="myList"></ul>
-        <p class="muted" id="myEmpty" hidden>No tokens on this account yet.</p>
-      </section>
 
-      <!-- RESELLER -->
-      <section class="card" id="resPanel" hidden>
-        <h2>Reseller <span class="pill" id="resCredits">— credits</span></h2>
-        <p class="muted">Mint tokens for buyers. Each spends credits from your balance.</p>
-        <form class="grid" id="resForm" novalidate>
-          <label>Tier
-            <select id="resTier">
-              <option value="standard">Standard (1)</option>
-              <option value="plus">Plus (2)</option>
-              <option value="dev">Dev (3)</option>
-            </select>
-          </label>
-          <label>Days (0 = never)<input type="number" id="resDays" min="0" value="30" /></label>
-          <label>Note<input type="text" id="resNote" placeholder="buyer name" /></label>
-          <button class="btn btn--primary btn--sm" type="submit">Mint token</button>
-        </form>
-        <p class="msg" id="resMsg" role="status" aria-live="polite"></p>
-        <ul class="toklist toklist--admin" id="resList"></ul>
-        <p class="muted" id="resEmpty" hidden>You haven't minted any tokens yet.</p>
-      </section>
-
-      <!-- ADMIN: create token -->
-      <section class="card" id="admPanel" hidden>
-        <h2>Admin — create token</h2>
-        <form class="grid" id="admForm" novalidate>
-          <label>Tier
-            <select id="admTier">
-              <option value="standard">Standard</option>
-              <option value="plus">Plus</option>
-              <option value="dev">Dev</option>
-            </select>
-          </label>
-          <label>Days (0 = never)<input type="number" id="admDays" min="0" value="0" /></label>
-          <label class="check"><input type="checkbox" id="admTester" /> Tester token</label>
-          <label>Assign to email<input type="email" id="admAssign" placeholder="buyer@example.com" /></label>
-          <label>Note<input type="text" id="admNote" placeholder="who / why" /></label>
-          <button class="btn btn--primary btn--sm" type="submit">Create token</button>
-        </form>
-        <p class="msg" id="admMsg" role="status" aria-live="polite"></p>
+        <!-- token list (role-appropriate) -->
+        <h3 class="hublist__title" id="hubListTitle">Your tokens</h3>
+        <ul class="toklist toklist--admin" id="myList"></ul>
+        <p class="muted" id="myEmpty" hidden>No tokens yet.</p>
       </section>
 
       <!-- ADMIN: manage resellers -->
@@ -117,13 +113,12 @@
         <h2>Admin — resellers &amp; roles</h2>
         <form class="grid" id="admUserForm" novalidate>
           <label>Account email<input type="email" id="admUserEmail" placeholder="person@example.com" /></label>
-          <label>Set role
+          <label>Set role (panel access)
             <select id="admUserRole">
               <option value="">— leave unchanged —</option>
-              <option value="user">user</option>
-              <option value="tester">tester</option>
-              <option value="reseller">reseller</option>
-              <option value="admin">admin</option>
+              <option value="reseller">Reseller (credit-based access)</option>
+              <option value="admin">Dev (full access)</option>
+              <option value="user">Remove panel access</option>
             </select>
           </label>
           <label>Add credits (+/-)<input type="number" id="admUserCredits" value="0" /></label>
@@ -132,17 +127,10 @@
         <p class="msg" id="admUserMsg" role="status" aria-live="polite"></p>
       </section>
 
-      <!-- ADMIN / RESELLER: token list -->
-      <section class="card" id="listPanel">
-        <h2 id="listTitle">All tokens</h2>
-        <ul class="toklist toklist--admin" id="admList"></ul>
-        <p class="muted" id="admEmpty" hidden>No tokens yet.</p>
-      </section>
-
     </div>
   </main>
 
-  <script src="assets/js/backend.js"></script>
-  <script src="assets/js/app.js"></script>
+  <script src="assets/js/backend.js?v=2"></script>
+  <script src="assets/js/app.js?v=2"></script>
 </body>
 </html>

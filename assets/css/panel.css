@@ -98,6 +98,17 @@ form { margin: 10px 0 0; }
   border: 1px solid var(--border); border-radius: 20px; padding: 2px 10px;
 }
 
+/* quick generate presets */
+.quickgen { margin: 4px 0 16px; padding: 12px; border: 1px dashed var(--border); border-radius: 10px; background: #0f131c; }
+.quickgen__label { display: block; font-size: 12px; color: var(--dim); margin-bottom: 8px; }
+.quickgen__btns { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn--tester { border-color: var(--warn); color: var(--warn); }
+.btn--tester:hover { background: rgba(250, 204, 21, .1); }
+.genlist { margin-top: 12px; }
+.genlist:empty { display: none; }
+.hubsep { border: 0; border-top: 1px solid var(--border); margin: 18px 0; }
+.hublist__title { font-size: 14px; color: var(--dim); margin: 18px 0 0; }
+
 /* token lists */
 .toklist { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .tok {

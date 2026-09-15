@@ -1,13 +1,13 @@
-/* T's Services — Panel app (panel.tservices.cc)
+/* Yaoki Panel — app (panel.tservices.cc)
    ---------------------------------------------------------------------------
    Separate origin from the main site, so its own localStorage / session, but
-   the same Better Auth + token backend. Sign in with a magic link, then the
-   UI is gated by the role the server reports for the account:
-     any signed-in user -> My tokens (claim + view)
-     reseller           -> + mint (credit-based) + own token list
-     admin              -> + tester tokens, assign, manage resellers, all tokens
-   Nothing here trusts the client's claim about its own role; every gate is
-   re-checked on the server. */
+   the same Better Auth + token backend. Magic-link sign-in, then one "My
+   tokens" hub gated by the account's server-resolved role:
+     any signed-in user -> claim + view their own tokens
+     reseller           -> + mint (credit-based) via presets or the form
+     admin ("Dev")      -> + tester tokens, assign-to-email, all tokens,
+                            and manage resellers/roles
+   Every gate is re-checked on the server; nothing trusts the client. */
 (function () {
   'use strict';
 
@@ -25,22 +25,23 @@
     soTitle: $('soTitle'), soHint: $('soHint'), soMsg: $('soMsg'),
     soResend: $('soResend'), soRestart: $('soRestart'),
 
+    // hub: mint (staff)
+    hubCredits: $('hubCredits'), hubMint: $('hubMint'),
+    hubQuick: $('hubQuick'), hubTesterBtn: $('hubTesterBtn'), hubGenList: $('hubGenList'),
+    hubMintForm: $('hubMintForm'), hubTier: $('hubTier'), hubDays: $('hubDays'),
+    hubNote: $('hubNote'), hubTester: $('hubTester'), hubTesterWrap: $('hubTesterWrap'),
+    hubAssign: $('hubAssign'), hubAssignWrap: $('hubAssignWrap'), hubMintMsg: $('hubMintMsg'),
+
+    // hub: claim (everyone)
     claimForm: $('claimForm'), claimInput: $('claimInput'), claimMsg: $('claimMsg'),
-    myList: $('myList'), myEmpty: $('myEmpty'),
 
-    resPanel: $('resPanel'), resCredits: $('resCredits'), resForm: $('resForm'),
-    resTier: $('resTier'), resDays: $('resDays'), resNote: $('resNote'), resMsg: $('resMsg'),
+    // hub: list
+    hubListTitle: $('hubListTitle'), myList: $('myList'), myEmpty: $('myEmpty'),
 
-    admPanel: $('admPanel'), admForm: $('admForm'), admTier: $('admTier'),
-    admDays: $('admDays'), admTester: $('admTester'), admAssign: $('admAssign'),
-    admNote: $('admNote'), admMsg: $('admMsg'),
-
+    // admin: manage resellers/roles
     admUsersPanel: $('admUsersPanel'), admUserForm: $('admUserForm'),
     admUserEmail: $('admUserEmail'), admUserRole: $('admUserRole'),
-    admUserCredits: $('admUserCredits'), admUserMsg: $('admUserMsg'),
-
-    listPanel: $('listPanel'), listTitle: $('listTitle'),
-    admList: $('admList'), admEmpty: $('admEmpty')
+    admUserCredits: $('admUserCredits'), admUserMsg: $('admUserMsg')
   };
 
   /* ---------- view switch ---------- */
@@ -50,6 +51,7 @@
     });
   }
   function say(el, text, kind) {
+    if (!el) return;
     el.textContent = text || '';
     el.className = 'msg' + (kind ? ' msg--' + kind : '');
   }
@@ -78,10 +80,7 @@
   function jpost(path, body) {
     return api(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) });
   }
-
-  function copy(text) {
-    try { navigator.clipboard.writeText(text); } catch (e) {}
-  }
+  function copy(text) { try { navigator.clipboard.writeText(text); } catch (e) {} }
 
   /* ---------- sign in ---------- */
   function toEmailForm() {
@@ -104,7 +103,6 @@
   function sendLink(email) {
     return jpost('/api/auth/sign-in/magic-link', { email: email, callbackURL: window.location.origin + '/' });
   }
-
   function verifyMagic(token) {
     show('loading');
     return timeoutFetch('/api/auth/magic-link/verify?token=' + encodeURIComponent(token), { method: 'GET' })
@@ -140,22 +138,28 @@
 
   function showPanels() {
     var role = state.role;
-    var staff = (role === 'admin' || role === 'reseller');
+    var admin = (role === 'admin');
+    var staff = (admin || role === 'reseller');
     show('panels');
-    els.resPanel.hidden = !staff;
-    els.admPanel.hidden = (role !== 'admin');
-    els.admUsersPanel.hidden = (role !== 'admin');
-    els.listPanel.hidden = !staff;
-    els.listTitle.textContent = (role === 'admin') ? 'All tokens' : 'Your tokens';
-    els.resCredits.textContent = state.credits + ' credits';
 
-    loadMyTokens();
-    if (staff) loadTokens();
+    // mint hub — staff only
+    els.hubMint.hidden = !staff;
+    // credits pill — resellers (admins are unlimited)
+    if (role === 'reseller') { els.hubCredits.hidden = false; els.hubCredits.textContent = state.credits + ' credits'; }
+    else els.hubCredits.hidden = true;
+    // admin-only fields
+    els.hubTesterBtn.hidden = !admin;
+    els.hubTesterWrap.hidden = !admin;
+    els.hubAssignWrap.hidden = !admin;
+    // admin management
+    els.admUsersPanel.hidden = !admin;
+
+    els.hubListTitle.textContent = admin ? 'All tokens' : 'Your tokens';
+    loadHubList();
   }
 
-  /* ---------- My tokens ---------- */
+  /* ---------- rendering ---------- */
   function fmtExpires(e) { return e ? String(e).slice(0, 10) : 'never'; }
-
   function badge(text, cls) {
     var s = document.createElement('span');
     s.className = 'tag' + (cls ? ' tag--' + cls : '');
@@ -164,48 +168,11 @@
   }
   function keyCode(k) {
     var c = document.createElement('code');
-    c.className = 'tokkey';
-    c.textContent = k;
-    c.title = 'Click to copy';
+    c.className = 'tokkey'; c.textContent = k; c.title = 'Click to copy';
     c.addEventListener('click', function () { copy(k); c.classList.add('copied'); setTimeout(function () { c.classList.remove('copied'); }, 900); });
     return c;
   }
-
-  function loadMyTokens() {
-    els.myList.textContent = ''; els.myEmpty.hidden = true;
-    api('/api/my-tokens', { method: 'GET' }).then(function (data) {
-      var toks = (data && data.tokens) || [];
-      if (!toks.length) { els.myEmpty.hidden = false; return; }
-      toks.forEach(function (t) {
-        var li = document.createElement('li'); li.className = 'tok';
-        li.appendChild(keyCode(t.token_key));
-        var meta = document.createElement('div'); meta.className = 'tok__meta';
-        meta.appendChild(badge(t.tier));
-        if (t.tester) meta.appendChild(badge('tester', 'tester'));
-        meta.appendChild(badge('exp ' + fmtExpires(t.expires)));
-        if (t.hwid) meta.appendChild(badge('bound', 'muted'));
-        if (t.revoked) meta.appendChild(badge('revoked', 'bad'));
-        li.appendChild(meta);
-        els.myList.appendChild(li);
-      });
-    }).catch(function () { say(els.claimMsg, 'Could not load your tokens.', 'err'); });
-  }
-
-  /* ---------- staff token list ---------- */
-  function loadTokens() {
-    els.admList.textContent = ''; els.admEmpty.hidden = true;
-    api('/api/tokens', { method: 'GET' }).then(function (data) {
-      var toks = (data && data.tokens) || [];
-      if (!toks.length) { els.admEmpty.hidden = false; return; }
-      toks.forEach(function (t) { els.admList.appendChild(staffRow(t)); });
-    }).catch(function () { els.admEmpty.hidden = false; });
-  }
-
-  function staffRow(t) {
-    var li = document.createElement('li'); li.className = 'tok tok--admin';
-    var top = document.createElement('div'); top.className = 'tok__top';
-    top.appendChild(keyCode(t.token_key));
-
+  function metaFor(t) {
     var meta = document.createElement('div'); meta.className = 'tok__meta';
     meta.appendChild(badge(t.tier));
     if (t.tester) meta.appendChild(badge('tester', 'tester'));
@@ -213,11 +180,35 @@
     if (t.hwid) meta.appendChild(badge('bound', 'muted'));
     if (t.revoked) meta.appendChild(badge('revoked', 'bad'));
     if (t.owner_email) meta.appendChild(badge('owner ' + t.owner_email, 'muted'));
-    if (t.created_by_email && state.role === 'admin') meta.appendChild(badge('by ' + t.created_by_email, 'muted'));
+    if (state.role === 'admin' && t.created_by_email) meta.appendChild(badge('by ' + t.created_by_email, 'muted'));
     if (t.note) meta.appendChild(badge(t.note, 'muted'));
-    top.appendChild(meta);
-    li.appendChild(top);
+    return meta;
+  }
 
+  /* ---------- token list (role-appropriate) ---------- */
+  function loadHubList() {
+    els.myList.textContent = ''; els.myEmpty.hidden = true;
+    var staff = (state.role === 'admin' || state.role === 'reseller');
+    var path = staff ? '/api/tokens' : '/api/my-tokens';
+    api(path, { method: 'GET' }).then(function (data) {
+      var toks = (data && data.tokens) || [];
+      if (!toks.length) { els.myEmpty.hidden = false; return; }
+      toks.forEach(function (t) { els.myList.appendChild(staff ? staffRow(t) : userRow(t)); });
+    }).catch(function () { els.myEmpty.hidden = false; });
+  }
+
+  function userRow(t) {
+    var li = document.createElement('li'); li.className = 'tok';
+    li.appendChild(keyCode(t.token_key));
+    li.appendChild(metaFor(t));
+    return li;
+  }
+  function staffRow(t) {
+    var li = document.createElement('li'); li.className = 'tok tok--admin';
+    var top = document.createElement('div'); top.className = 'tok__top';
+    top.appendChild(keyCode(t.token_key));
+    top.appendChild(metaFor(t));
+    li.appendChild(top);
     var actions = document.createElement('div'); actions.className = 'tok__actions';
     if (!t.revoked) actions.appendChild(actionBtn('Revoke', 'revoke', t.id));
     if (t.hwid)     actions.appendChild(actionBtn('Unbind', 'unbind', t.id));
@@ -225,7 +216,6 @@
     li.appendChild(actions);
     return li;
   }
-
   function actionBtn(label, action, id, danger) {
     var b = document.createElement('button');
     b.className = 'btn btn--sm' + (danger ? ' btn--danger' : ' btn--ghost');
@@ -234,66 +224,52 @@
       if (action === 'delete' && !window.confirm('Delete this token permanently?')) return;
       b.disabled = true;
       jpost('/api/token-action', { id: id, action: action })
-        .then(function () { loadTokens(); loadMyTokens(); })
+        .then(function () { loadHubList(); })
         .catch(function (err) { b.disabled = false; window.alert(err.message); });
     });
     return b;
   }
 
-  /* ---------- reseller mint ---------- */
-  function wireResMint() {
-    els.resForm.addEventListener('submit', function (e) {
-      e.preventDefault();
-      say(els.resMsg, 'Minting…', '');
-      jpost('/api/tokens', {
-        tier: els.resTier.value,
-        days: parseInt(els.resDays.value, 10) || 0,
-        note: els.resNote.value
-      }).then(function (data) {
-        say(els.resMsg, 'Token: ' + data.token.token_key + '  (click a key to copy)', 'ok');
-        els.resNote.value = '';
-        // credits changed — refresh from server
-        return api('/api/me', { method: 'GET' });
-      }).then(function (me) {
-        state.credits = me.credits; els.resCredits.textContent = me.credits + ' credits';
-        loadTokens();
-      }).catch(function (err) { say(els.resMsg, err.message, 'err'); });
+  /* ---------- minting ---------- */
+  function refreshCredits() {
+    if (state.role !== 'reseller') return;
+    api('/api/me', { method: 'GET' }).then(function (me) {
+      state.credits = me.credits;
+      els.hubCredits.textContent = me.credits + ' credits';
+    }).catch(function () {});
+  }
+  function genRow(tok) {
+    var li = document.createElement('li'); li.className = 'tok';
+    li.appendChild(keyCode(tok.token_key));
+    var meta = metaFor(tok);
+    meta.appendChild(badge('click key to copy', 'muted'));
+    li.appendChild(meta);
+    els.hubGenList.insertBefore(li, els.hubGenList.firstChild);
+  }
+  function mint(body) {
+    return jpost('/api/tokens', body).then(function (data) {
+      genRow(data.token);
+      loadHubList();
+      refreshCredits();
+      return data.token;
     });
   }
 
-  /* ---------- admin mint ---------- */
-  function wireAdmMint() {
-    els.admForm.addEventListener('submit', function (e) {
-      e.preventDefault();
-      say(els.admMsg, 'Creating…', '');
-      jpost('/api/tokens', {
-        tier: els.admTier.value,
-        days: parseInt(els.admDays.value, 10) || 0,
-        tester: els.admTester.checked,
-        assignEmail: els.admAssign.value.trim(),
-        note: els.admNote.value
-      }).then(function (data) {
-        say(els.admMsg, 'Token: ' + data.token.token_key, 'ok');
-        els.admAssign.value = ''; els.admNote.value = ''; els.admTester.checked = false;
-        loadTokens();
-      }).catch(function (err) { say(els.admMsg, err.message, 'err'); });
-    });
-  }
-
-  /* ---------- admin manage users ---------- */
-  function wireAdmUsers() {
-    els.admUserForm.addEventListener('submit', function (e) {
-      e.preventDefault();
-      var body = { email: els.admUserEmail.value.trim() };
-      if (els.admUserRole.value) body.role = els.admUserRole.value;
-      var add = parseInt(els.admUserCredits.value, 10) || 0;
-      if (add !== 0) body.addCredits = add;
-      say(els.admUserMsg, 'Applying…', '');
-      jpost('/api/admin-user', body).then(function (data) {
-        var u = data.user;
-        say(els.admUserMsg, u.email + ' → role ' + u.role + ', ' + u.credits + ' credits', 'ok');
-        els.admUserCredits.value = '0';
-      }).catch(function (err) { say(els.admUserMsg, err.message, 'err'); });
+  function wireQuick() {
+    if (!els.hubQuick) return;
+    var btns = els.hubQuick.querySelectorAll('button[data-days]');
+    Array.prototype.forEach.call(btns, function (btn) {
+      btn.addEventListener('click', function () {
+        btn.disabled = true;
+        mint({
+          tier: els.hubTier.value,
+          days: parseInt(btn.getAttribute('data-days'), 10) || 0,
+          tester: btn.getAttribute('data-tester') === '1'
+        }).then(function (tok) {
+          btn.disabled = false;
+          say(els.hubMintMsg, 'Created ' + tok.token_key + ' — click it above to copy.', 'ok');
+        }).catch(function (err) { btn.disabled = false; say(els.hubMintMsg, err.message, 'err'); });
+      });
     });
   }
 
@@ -321,33 +297,63 @@
       if (had) jpost('/api/auth/sign-out', {}).catch(function () {});
     });
 
+    // claim (everyone)
     els.claimForm.addEventListener('submit', function (e) {
       e.preventDefault();
       var key = els.claimInput.value.trim();
       if (!key) { say(els.claimMsg, 'Enter a token.', 'err'); return; }
       say(els.claimMsg, 'Adding…', '');
       jpost('/api/my-tokens', { token: key }).then(function () {
-        els.claimInput.value = ''; say(els.claimMsg, 'Token added.', 'ok'); loadMyTokens();
+        els.claimInput.value = ''; say(els.claimMsg, 'Token added to your account.', 'ok'); loadHubList();
       }).catch(function (err) { say(els.claimMsg, err.message, 'err'); });
     });
 
-    wireResMint(); wireAdmMint(); wireAdmUsers();
+    // mint form (staff)
+    els.hubMintForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      say(els.hubMintMsg, 'Minting…', '');
+      var body = {
+        tier: els.hubTier.value,
+        days: parseInt(els.hubDays.value, 10) || 0,
+        note: els.hubNote.value
+      };
+      if (state.role === 'admin') {
+        body.tester = els.hubTester.checked;
+        body.assignEmail = els.hubAssign.value.trim();
+      }
+      mint(body).then(function (tok) {
+        say(els.hubMintMsg, 'Created ' + tok.token_key + ' — click it above to copy.', 'ok');
+        els.hubNote.value = '';
+        if (state.role === 'admin') { els.hubTester.checked = false; els.hubAssign.value = ''; }
+      }).catch(function (err) { say(els.hubMintMsg, err.message, 'err'); });
+    });
+
+    // admin: manage resellers / roles
+    els.admUserForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var body = { email: els.admUserEmail.value.trim() };
+      if (els.admUserRole.value) body.role = els.admUserRole.value;
+      var add = parseInt(els.admUserCredits.value, 10) || 0;
+      if (add !== 0) body.addCredits = add;
+      say(els.admUserMsg, 'Applying…', '');
+      jpost('/api/admin-user', body).then(function (data) {
+        var u = data.user;
+        say(els.admUserMsg, u.email + ' → role ' + u.role + ', ' + u.credits + ' credits', 'ok');
+        els.admUserCredits.value = '0';
+      }).catch(function (err) { say(els.admUserMsg, err.message, 'err'); });
+    });
+
+    wireQuick();
   }
 
   /* Cross-tab sign-in: when the magic link is opened in another tab of the
-     same browser, it stores the session token in localStorage — which fires a
-     `storage` event in every OTHER tab. A tab still sitting on the sign-in
-     screen picks that up here and signs itself in, so you don't have to come
-     back and refresh it. (Different physical devices have separate storage, so
-     this covers same-browser only.) */
+     same browser, it stores the session token in localStorage, firing a
+     `storage` event in every OTHER tab. A tab still on the sign-in screen
+     picks it up here and signs itself in (same-browser only). */
   window.addEventListener('storage', function (e) {
     if (e.key !== 'ts_auth_token') return;
-    if (e.newValue) {
-      loadMe();
-    } else {
-      els.who.hidden = true; els.signOut.hidden = true;
-      toEmailForm(); show('signedOut');
-    }
+    if (e.newValue) loadMe();
+    else { els.who.hidden = true; els.signOut.hidden = true; toEmailForm(); show('signedOut'); }
   });
 
   /* ---------- boot ---------- */
